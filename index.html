@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Selections Configurator</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f0f2f5; display: flex; height: 100vh; color: #333; font-size: 15px; }
+    .configurator-container { display: flex; width: 100%; height: 100%; }
+    .main-config-area { flex: 3; padding: 1.5em 2em; overflow-y: auto; background: #f0f2f5; }
+    .selections-sheet-pane {
+        flex: 2;
+        padding: 1.5em 2em;
+        overflow-y: auto;
+        background: #ffffff;
+        border-left: 1px solid #d9d9d9;
+        box-shadow: -3px 0 8px rgba(0,0,0,0.07);
+        display: flex;
+        flex-direction: column;
+    }
+    .config-section { margin-bottom: 1.5em; /* Reduced margin slightly */ }
+    .config-section h2 { /* This will now be the summary for house plans */
+        font-size: 1.4em; color: #007bff;
+        padding-bottom: 0.3em; margin-bottom: 0; /* Adjusted for details/summary */
+        cursor: pointer;
+    }
+     /* Specific style for details summary acting as section header */
+    .config-section > details > summary {
+        font-size: 1.4em; color: #007bff; border-bottom: 2px solid #007bff;
+        padding-bottom: 0.3em; margin-bottom: 0.8em;
+        list-style: none; /* Remove default marker */
+        display: block; /* Make it behave like a block for consistent styling */
+        font-weight: bold;
+    }
+    .config-section > details > summary::-webkit-details-marker { display: none; }
+
+
+    .config-section h3 { font-size: 1.2em; color: #17a2b8; margin-top: 1.5em; margin-bottom: 0.6em;}
+
+    /* House Plan Styles */
+    #housePlanSelectorContainer { display: flex; flex-wrap: wrap; gap: 1.5em; padding-top: 0.8em; }
+    .house-plan-card {
+        background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1em;
+        width: calc(50% - 2em); /* Adjust for gap */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s ease;
+    }
+    .house-plan-card:hover { border-color: #007bff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .house-plan-card.selected-plan { border-color: #007bff; background-color: #e6f7ff; box-shadow: 0 0 0 3px rgba(0,123,255,.3); }
+    .house-plan-card img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 0.8em; background-color: #e9ecef; }
+    .house-plan-card h4 { margin: 0.5em 0; font-size: 1.15em; color: #343a40; }
+    .house-plan-card p { font-size: 0.9em; color: #6c757d; margin-bottom: 0.3em; }
+    .plan-summary-text { font-size: 0.8em; color: #495057; font-weight: normal; margin-left: 10px;}
+
+
+    /* Structural Options Styles */
+    #structuralOptionsContainer .option-group { margin-bottom: 0.5em; }
+    #structuralOptionsContainer label { display: block; margin-bottom: 0.3em; font-weight: 500; }
+    #structuralOptionsContainer input[type="checkbox"] { margin-right: 8px; }
+
+    /* Product Configurator Styles (from previous) */
+    .category { margin-bottom: 1em; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .group { margin-top: 0.5em; border-top: 1px dashed #eaeaea; padding: 1em; }
+    details.product-category-details { width: 100%; } /* Differentiate from plan details */
+    details.product-category-details > summary { /* Styles for product category summaries */
+        font-size: 1.1em; color: #333; border-bottom: 1px solid #e0e0e0;
+        padding: 0.8em 1em; list-style: none;
+        display: flex; justify-content: space-between; align-items: center;
+        border-radius: 7px 7px 0 0; background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    details.product-category-details > summary::-webkit-details-marker { display: none; }
+    details.product-category-details > summary::before { content: '▶'; margin-right: 0.5em; font-size: 0.8em; transition: transform 0.2s ease-in-out; }
+    details.product-category-details[open] > summary::before { transform: rotate(90deg); }
+
+    .category-status-indicator { font-size: 1em; margin-left: 0.5em; }
+    .status-complete { color: #28a745; } .status-partial { color: #ffc107; }
+
+    .card-container { display: flex; flex-wrap: wrap; gap: 0.8em; margin-bottom: 0.8em; }
+    .card {
+      border: 2px solid #d1d5db; border-radius: 6px; width: 170px; padding: 8px; background: #fff;
+      cursor: pointer; transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out; position: relative;
+    }
+    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-color: #adb5bd; }
+    .card.selected { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,.25); }
+    .card img.product-image { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; background-color: #f8f9fa; }
+    .card-title { font-weight: 600; margin-top: 0.5em; font-size: 0.85em; color: #495057; }
+    .color-swatch-container { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+    .color-swatch {
+        width:22px; height:22px; border-radius:50%; border:2px solid #ced4da; cursor:pointer;
+        transition: border-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+        background-size: cover; background-position: center;
+    }
+    .color-swatch:hover { transform: scale(1.15); border-color: #868e96; }
+    .color-swatch.selected-color { border-color: #0056b3; box-shadow: 0 0 0 2px rgba(0,86,179,.3); }
+    .notes-input { width: calc(100% - 20px); padding: 8px 10px; margin-top: 0.8em; border-radius: 4px; border: 1px solid #ced4da; font-size:0.9em;}
+
+    /* Selections Sheet & Pricing Styles */
+    #pricingSummaryContainer { padding: 1em; background-color: #e9f5ff; border-radius: 8px; margin-bottom: 1.5em; border: 1px solid #b3d7f0;}
+    #pricingSummaryContainer h3 { font-size: 1.2em; color: #0056b3; margin-top: 0; margin-bottom: 0.8em; }
+    #pricingSummaryContainer p { margin: 0.4em 0; font-size: 0.95em; display: flex; justify-content: space-between; }
+    #pricingSummaryContainer p span:last-child { font-weight: 600; }
+    #pricingSummaryContainer .grand-total { font-size: 1.1em; font-weight: bold; color: #004085; border-top: 1px solid #99c5e8; padding-top: 0.5em; margin-top: 0.5em;}
+
+    #selectionsSheetContent { flex-grow: 1; }
+    #selectionsSheetContent h3.sheet-category-title { font-size: 1.1em; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 0.4em; margin-top:0; cursor: pointer; }
+    #selectionsSheetContent .sheet-category { margin-bottom: 1.2em; }
+    #selectionsSheetContent .sheet-item {
+        padding: 0.7em; margin-bottom: 0.7em; background-color: #f8f9fa;
+        border: 1px solid #e9ecef; border-radius: 4px; font-size: 0.88em; cursor: pointer;
+    }
+    #selectionsSheetContent .sheet-item:hover { background-color: #e9ecef; }
+    #selectionsSheetContent .sheet-item strong { display: inline-block; min-width: 75px; color: #495057;}
+    #selectionsSheetContent .sheet-item img.color-preview { width: 18px; height: 18px; border-radius: 50%; vertical-align: middle; margin-left: 5px; border: 1px solid #adb5bd; }
+    #selectionsSheetContent .no-selection { color: #6c757d; font-style: italic; padding: 1em; text-align: center;}
+
+    #colorPreviewPopup {
+        position: fixed; display: none; width: 120px; height: 120px; border: 3px solid #fff;
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000;
+        pointer-events: none; background-size: cover; background-position: center; background-color: #f0f0f0;
+    }
+    .action-buttons button { padding: 0.6em 1.2em; cursor: pointer; border-radius: 5px; border: 1px solid transparent; margin-top: 0.5em; margin-right: 0.5em; font-weight: 500; transition: background-color 0.2s ease, border-color 0.2s ease; }
+    .print-btn { background-color: #007bff; color: white; border-color: #007bff;}
+    .download-btn { background-color: #28a745; color: white; border-color: #28a745;}
+    .clear-btn { background-color: #dc3545; color: white; border-color: #dc3545;}
+    .add-room-btn { background-color: #17a2b8; color: white; border-color: #17a2b8;}
+
+    @media print { /* styles as before */ }
+  </style>
+</head>
+<body>
+  <div id="colorPreviewPopup"></div>
+  <div class="configurator-container">
+    <div class="main-config-area">
+      <p style="background: #e6f7ff; color: #005f87; padding: 1em; border: 1px solid #b3e0ff; border-radius: 4px; margin-bottom: 2em; font-size: 0.95em;">
+        Welcome! Start by selecting a House Plan, then choose Structural Options, and finally configure your product selections.
+      </p>
+      <h1>Advanced Selections Configurator</h1>
+
+      <div class="config-section" id="housePlanSection">
+        <details id="housePlanDetails">
+            <summary id="housePlanSummary">1. Select a House Plan</summary>
+            <div id="housePlanSelectorContainer">
+              <p>Loading house plans...</p>
+            </div>
+        </details>
+      </div>
+
+      <div class="config-section" id="structuralOptionsSection" style="display: none;">
+        <h2>2. Select Structural Options</h2>
+        <div id="structuralOptionsContainer">
+          </div>
+      </div>
+
+      <div class="config-section" id="productConfiguratorSection" style="display: none;">
+        <h2>3. Configure Product Selections</h2>
+        <div id="addRoomControls" style="margin-bottom: 1.5em; padding: 1em; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <label for='newRoomName' style="font-weight: 600;">Add Custom Room (for Flooring/Paint): </label>
+            <input id='newRoomName' type='text' placeholder='e.g. Home Office' style="padding: 8px; border-radius: 4px; border: 1px solid #ced4da; margin-right: 8px; font-size: 0.9em;">
+            <button onclick='APP_CONTROLLER.addConfigurableRoom()' class="add-room-btn">Add Room</button>
+        </div>
+        <div id="configurator">
+          </div>
+      </div>
+    </div>
+
+    <div class="selections-sheet-pane">
+      <h2>Selections & Pricing</h2>
+      <div id="pricingSummaryContainer">
+        <h3>Pricing Summary</h3>
+        <p><span>Base House Price:</span> <span id="priceBase">$0.00</span></p>
+        <p><span>Structural Options:</span> <span id="priceStructuralOptions">$0.00</span></p>
+        <p><span>Net Product Selections:</span> <span id="priceProductSelections">$0.00</span></p>
+        <hr style="border: none; border-top: 1px solid #99c5e8; margin: 0.5em 0;">
+        <p class="grand-total"><span>Grand Total:</span> <span id="priceGrandTotal">$0.00</span></p>
+      </div>
+      <div id="selectionsSheetContent">
+        <p class="no-selection">Select a house plan to begin.</p>
+      </div>
+      <div class="action-buttons" style="margin-top: auto; padding-top: 1em; border-top: 1px solid #e0e0e0;">
+        <button onclick="window.print()" class="print-btn">Print Selections</button>
+        <button onclick="APP_CONTROLLER.downloadConfiguredSelections()" class="download-btn">Download JSON</button>
+        <button onclick="APP_CONTROLLER.clearAllConfiguredSelections()" class="clear-btn">Clear All & Reset Plan</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- DATA (Simplified version of the JSON structure) ---
+const DB = {
+  housePlans: [
+    {
+      id: "plan_the_aspen", name: "The Aspen", basePrice: 250000, sqft: 1500, beds: 3, baths: 2,
+      image: "https://placehold.co/300x200/A9D2C6/4A5568?text=Aspen",
+      description: "Charming 1,500 sq ft ranch.",
+      availableStructuralOptions: ["so_deck_expanded", "so_garage_2car"],
+      categoryBaseAllowances: { "Roofing": 7000, "Siding": 9000, "Paint - Living Room": 600, "Flooring - Kitchen": 1200, "Windows": 8000 }
+    },
+    {
+      id: "plan_the_bradford", name: "The Bradford", basePrice: 320000, sqft: 2200, beds: 4, baths: 2.5,
+      image: "https://placehold.co/300x200/D2B4A9/4A5568?text=Bradford",
+      description: "Spacious 2,200 sq ft two-story.",
+      availableStructuralOptions: ["so_garage_2car_extended", "so_sunroom"],
+      categoryBaseAllowances: { "Roofing": 9500, "Siding": 12000, "Paint - Living Room": 750, "Flooring - Kitchen": 1500, "Windows": 11000 }
+    },
+    {
+      id: "plan_the_cedar", name: "The Cedar Modern", basePrice: 295000, sqft: 1800, beds: 2, baths: 2.5,
+      image: "https://placehold.co/300x200/B8C9D2/4A5568?text=Cedar+Modern",
+      description: "Sleek 1,800 sq ft contemporary.",
+      availableStructuralOptions: ["so_rooftop_deck_small", "so_smart_home_package_adv"],
+      categoryBaseAllowances: { "Roofing": 8000, "Siding": 10000, "Paint - Living Room": 700, "Flooring - Kitchen": 1300, "Windows": 12000 }
+    },
+    {
+      id: "plan_the_dawson", name: "The Dawson Craftsman", basePrice: 310000, sqft: 2000, beds: 3, baths: 2,
+      image: "https://placehold.co/300x200/D2C6A9/4A5568?text=Dawson",
+      description: "Beautiful 2,000 sq ft craftsman.",
+      availableStructuralOptions: ["so_garage_2car", "so_builtins_livingroom"],
+      categoryBaseAllowances: { "Roofing": 8500, "Siding": 11000, "Paint - Living Room": 720, "Flooring - Kitchen": 1400, "Windows": 9500 }
+    },
+    {
+      id: "plan_the_elmwood", name: "The Elmwood Colonial", basePrice: 350000, sqft: 2500, beds: 4, baths: 3.5,
+      image: "https://placehold.co/300x200/A9B4D2/4A5568?text=Elmwood",
+      description: "Classic 2,500 sq ft colonial.",
+      availableStructuralOptions: ["so_garage_3car_side", "so_morning_room_kitchen"],
+      categoryBaseAllowances: { "Roofing": 10000, "Siding": 8000, "Paint - Living Room": 800, "Flooring - Kitchen": 1600, "Windows": 10000 }
+    }
+  ],
+  structuralOptions: {
+    "so_deck_expanded": { id: "so_deck_expanded", name: "Expanded Rear Deck", priceAdjustment: 4500, effects: [{"category": "Decking", "allowanceAdjustment": 1000}] },
+    "so_garage_2car": { id: "so_garage_2car", name: "Attached 2-Car Garage", priceAdjustment: 22000, effects: [{"category": "Siding", "allowanceAdjustment": 2000}, {"category": "Roofing", "allowanceAdjustment": 1500}] },
+    "so_garage_2car_extended": { id: "so_garage_2car_extended", name: "Extended 2-Car Garage", priceAdjustment: 26000, effects: [{"category": "Siding", "allowanceAdjustment": 2500}, {"category": "Roofing", "allowanceAdjustment": 1800}] },
+    "so_sunroom": { id: "so_sunroom", name: "Sunroom Addition", priceAdjustment: 18000, effects: [{"category": "Windows", "allowanceAdjustment": 4000}, {"category": "Flooring - Sunroom", "newCategory": true, "baseAllowance": 800}, {"category": "Paint - Sunroom", "newCategory": true, "baseAllowance": 300}] },
+    "so_rooftop_deck_small": { id: "so_rooftop_deck_small", name: "Small Rooftop Deck", priceAdjustment: 12000, effects: [{"category": "Roofing", "notes": "Requires flat roof portion, specific membrane"}] },
+    "so_smart_home_package_adv": { id: "so_smart_home_package_adv", name: "Advanced Smart Home Package", priceAdjustment: 7500 },
+    "so_builtins_livingroom": { id: "so_builtins_livingroom", name: "Living Room Built-ins", priceAdjustment: 5000, effects: [{"category": "Interior Trim", "allowanceAdjustment": 1500}] },
+    "so_garage_3car_side": { id: "so_garage_3car_side", name: "Side-Load 3-Car Garage", priceAdjustment: 35000, effects: [{"category": "Siding", "allowanceAdjustment": 3500}, {"category": "Roofing", "allowanceAdjustment": 2500}] },
+    "so_morning_room_kitchen": { id: "so_morning_room_kitchen", name: "Morning Room off Kitchen", priceAdjustment: 15000, effects: [{"category": "Windows", "allowanceAdjustment": 2000}, {"category": "Flooring - Morning Room", "newCategory": true, "baseAllowance": 700}, {"category": "Paint - Morning Room", "newCategory": true, "baseAllowance": 250}] }
+  },
+  productCatalog: { // Simplified catalog
+    "Roofing": [
+      { id: "roof_std", name: "Standard Shingles", priceType: "allowance_based", priceValue: 0, image: "https://placehold.co/170x90/78716C/FFFFFF?text=Std+Roof", colors: [{id:"gray", name:"Gray", image:"https://placehold.co/22x22/A1A1AA/FFFFFF?text=G"}] },
+      { id: "roof_prem", name: "Premium Metal Roof", priceType: "upgrade_cost_total", priceValue: 8000, image: "https://placehold.co/170x90/44403C/FFFFFF?text=Metal+Roof", colors: [{id:"black", name:"Black", image:"https://placehold.co/22x22/27272A/FFFFFF?text=B"}] }
+    ],
+    "Siding": [
+      { id: "siding_std", name: "Standard Vinyl", priceType: "allowance_based", priceValue: 0, image: "https://placehold.co/170x90/D1D5DB/4A5568?text=Std+Siding", colors: [{id:"white", name:"White", image:"https://placehold.co/22x22/F3F4F6/000000?text=W"}] },
+      { id: "siding_prem", name: "Premium Fiber Cement", priceType: "upgrade_cost_total", priceValue: 6500, image: "https://placehold.co/170x90/A3BFFA/4A5568?text=Fiber+Siding", colors: [{id:"blue", name:"Blue", image:"https://placehold.co/22x22/60A5FA/FFFFFF?text=B"}] }
+    ],
+    "Windows": [
+        {id: "win_std", name: "Standard Windows", priceType: "allowance_based", priceValue: 0, image: "https://placehold.co/170x90/BFDBFE/4A5568?text=Std+Win", colors: [{id:"white_frame", name:"White Frame", image:"https://placehold.co/22x22/EFF6FF/000000?text=WF"}]}
+    ],
+    "Paint": [ // Generic paint products
+      { id: "paint_std", name: "Standard Paint", priceType: "allowance_based", priceValue: 0, image: "https://placehold.co/170x90/E5E7EB/4A5568?text=Std+Paint", colors: [{id:"beige", name:"Beige", image:"https://placehold.co/22x22/F5F5DC/000000?text=B"}]},
+      { id: "paint_prem", name: "Premium Paint", priceType: "upgrade_cost_per_room", priceValue: 150, image: "https://placehold.co/170x90/D1D5DB/4A5568?text=Prem+Paint", colors: [{id:"grey", name:"Cool Grey", image:"https://placehold.co/22x22/D1D5DB/000000?text=CG"}]}
+    ],
+    "Flooring": [ // Generic flooring products
+      { id: "floor_lvp_std", name: "Standard LVP", priceType: "allowance_based", priceValue: 0, image: "https://placehold.co/170x90/D2B48C/4A5568?text=Std+LVP", colors: [{id:"oak", name:"Oak", image:"https://placehold.co/22x22/DEB887/000000?text=O"}]},
+      { id: "floor_hw_prem", name: "Premium Hardwood", priceType: "upgrade_cost_per_room", priceValue: 800, image: "https://placehold.co/170x90/A0522D/FFFFFF?text=Hardwood", colors: [{id:"walnut", name:"Walnut", image:"https://placehold.co/22x22/704214/FFFFFF?text=W"}]}
+    ]
+    // ... more product categories
+  },
+  baseSpecsDefinition: { // Base categories, Paint & Flooring are dynamic
+    "Exterior": ["Roofing", "Siding", "Windows"],
+    "Interior": [], // Placeholder for general interior items if needed
+    "Paint Selections": [],
+    "Flooring Selections": []
+  }
+};
+
+// --- APPLICATION STATE ---
+let AppState = {
+  selectedHousePlanId: null,
+  selectedStructuralOptionIds: [],
+  currentConfigurableRooms: ["Living Room", "Kitchen", "Master Bedroom", "Master Bathroom", "Bedroom 2"], // Default rooms
+  configuredSelections: {}, // For product choices: { specKey: { productId, colorId, notes, finalPrice } }
+  currentPlanAllowances: {} // Populated when a plan is selected
+};
+
+// --- DOM ELEMENTS ---
+const HousePlanDetails = document.getElementById('housePlanDetails');
+const HousePlanSummary = document.getElementById('housePlanSummary');
+const HousePlanSelectorContainer = document.getElementById('housePlanSelectorContainer');
+const StructuralOptionsContainer = document.getElementById('structuralOptionsContainer');
+const ProductConfiguratorDiv = document.getElementById('configurator');
+const SelectionsSheetContentDiv = document.getElementById('selectionsSheetContent');
+const ColorPreviewPopup = document.getElementById('colorPreviewPopup');
+const AddRoomNameInput = document.getElementById('newRoomName');
+
+// Pricing display elements
+const PriceBaseEl = document.getElementById('priceBase');
+const PriceStructuralOptionsEl = document.getElementById('priceStructuralOptions');
+const PriceProductSelectionsEl = document.getElementById('priceProductSelections');
+const PriceGrandTotalEl = document.getElementById('priceGrandTotal');
+
+// Section containers
+const HousePlanSection = document.getElementById('housePlanSection');
+const StructuralOptionsSection = document.getElementById('structuralOptionsSection');
+const ProductConfiguratorSection = document.getElementById('productConfiguratorSection');
+
+
+// --- CONTROLLER (Event Handlers & Logic) ---
+const APP_CONTROLLER = {
+  init: function() {
+    this.loadStateFromLocalStorage();
+    this.renderHousePlans(); // This will also update the summary if a plan is loaded
+    
+    if (AppState.selectedHousePlanId) {
+        const plan = DB.housePlans.find(p => p.id === AppState.selectedHousePlanId);
+        if (plan) {
+            this.updateHousePlanSummary(plan); // Update summary text
+            HousePlanDetails.open = false; // Collapse if a plan is already selected
+            this.selectHousePlanUIUpdate(plan); 
+            this.renderStructuralOptions();
+            this.renderProductConfigurator();
+        } else { 
+            AppState.selectedHousePlanId = null;
+            this.updateHousePlanSummary(null); // Reset summary text
+        }
+    } else {
+        this.updateHousePlanSummary(null); // Ensure default summary text
+        HousePlanDetails.open = true; // Open if no plan selected
+    }
+    this.updatePricingDisplay();
+    this.renderSelectionsSheet(); 
+  },
+
+  renderHousePlans: function() {
+    HousePlanSelectorContainer.innerHTML = ''; // Clear previous cards
+    DB.housePlans.forEach(plan => {
+      const card = document.createElement('div');
+      card.className = 'house-plan-card';
+      if (plan.id === AppState.selectedHousePlanId) {
+        card.classList.add('selected-plan');
+      }
+      card.innerHTML = `
+        <img src="${plan.image}" alt="${plan.name}" onerror="this.src='https://placehold.co/300x200/cccccc/969696?text=Image+Not+Found'">
+        <h4>${plan.name}</h4>
+        <p>${plan.description}</p>
+        <p><strong>Base Price:</strong> $${plan.basePrice.toLocaleString()}</p>
+        <p>${plan.sqft} sq ft | ${plan.beds} Beds | ${plan.baths} Baths</p>
+      `;
+      card.addEventListener('click', () => this.handleHousePlanSelect(plan.id));
+      HousePlanSelectorContainer.appendChild(card);
+    });
+  },
+
+  updateHousePlanSummary: function(plan) {
+    if (plan) {
+        HousePlanSummary.innerHTML = `1. Selected Plan: <span class="plan-summary-text">${plan.name} | Base Price: $${plan.basePrice.toLocaleString()}</span>`;
+    } else {
+        HousePlanSummary.textContent = '1. Select a House Plan';
+    }
+  },
+
+  handleHousePlanSelect: function(planId) {
+    if (AppState.selectedHousePlanId === planId) { // If clicking the same plan, toggle open/close
+        HousePlanDetails.open = !HousePlanDetails.open;
+        return; 
+    }
+
+    AppState.selectedHousePlanId = planId;
+    AppState.selectedStructuralOptionIds = []; 
+    AppState.configuredSelections = {}; 
+    
+    const plan = DB.housePlans.find(p => p.id === planId);
+    if (!plan) return;
+
+    this.updateHousePlanSummary(plan);
+    HousePlanDetails.open = false; // Collapse after selection
+
+    this.selectHousePlanUIUpdate(plan);
+    this.renderStructuralOptions();
+    this.renderProductConfigurator(); 
+    this.updatePricingDisplay();
+    this.renderSelectionsSheet();
+    this.saveStateToLocalStorage();
+
+    // Scroll to structural options if it's not visible
+    setTimeout(() => { // Timeout to allow DOM updates
+        StructuralOptionsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+
+  },
+
+  selectHousePlanUIUpdate: function(plan) {
+    document.querySelectorAll('.house-plan-card').forEach(c => c.classList.remove('selected-plan'));
+    // Find the card within the HousePlanSelectorContainer
+    const cardElements = HousePlanSelectorContainer.getElementsByClassName('house-plan-card');
+    for (let cardEl of cardElements) {
+        if (cardEl.innerHTML.includes(plan.name)) { // Simple check, could be improved with data-id
+            cardEl.classList.add('selected-plan');
+            break;
+        }
+    }
+
+    AppState.currentPlanAllowances = JSON.parse(JSON.stringify(plan.categoryBaseAllowances || {}));
+    
+    StructuralOptionsSection.style.display = 'block';
+    ProductConfiguratorSection.style.display = 'block';
+    document.getElementById('addRoomControls').style.display = 'block';
+  },
+
+  renderStructuralOptions: function() {
+    StructuralOptionsContainer.innerHTML = '';
+    const plan = DB.housePlans.find(p => p.id === AppState.selectedHousePlanId);
+    if (!plan || !plan.availableStructuralOptions) {
+      StructuralOptionsContainer.innerHTML = '<p>No structural options available for this plan or plan not selected.</p>';
+      return;
+    }
+
+    if (plan.availableStructuralOptions.length === 0) {
+        StructuralOptionsContainer.innerHTML = '<p>No specific structural options listed for this plan.</p>';
+        return;
+    }
+
+    plan.availableStructuralOptions.forEach(optionId => {
+      const option = DB.structuralOptions[optionId];
+      if (!option) return;
+      const div = document.createElement('div');
+      div.className = 'option-group';
+      const isChecked = AppState.selectedStructuralOptionIds.includes(optionId);
+      div.innerHTML = `
+        <label>
+          <input type="checkbox" data-option-id="${optionId}" ${isChecked ? 'checked' : ''}>
+          ${option.name} (+ $${option.priceAdjustment.toLocaleString()})
+        </label>
+      `;
+      div.querySelector('input').addEventListener('change', (e) => this.handleStructuralOptionToggle(optionId, e.target.checked));
+      StructuralOptionsContainer.appendChild(div);
+    });
+    this.applyAllStructuralOptionEffects(); 
+  },
+
+  handleStructuralOptionToggle: function(optionId, isSelected) {
+    if (isSelected) {
+      if (!AppState.selectedStructuralOptionIds.includes(optionId)) {
+        AppState.selectedStructuralOptionIds.push(optionId);
+      }
+    } else {
+      AppState.selectedStructuralOptionIds = AppState.selectedStructuralOptionIds.filter(id => id !== optionId);
+    }
+    this.applyAllStructuralOptionEffects(); 
+    this.renderProductConfigurator(); 
+    this.updatePricingDisplay();
+    this.renderSelectionsSheet();
+    this.saveStateToLocalStorage();
+  },
+
+  applyAllStructuralOptionEffects: function() {
+    const plan = DB.housePlans.find(p => p.id === AppState.selectedHousePlanId);
+    if (!plan) return;
+
+    AppState.currentPlanAllowances = JSON.parse(JSON.stringify(plan.categoryBaseAllowances || {}));
+    const defaultRooms = ["Living Room", "Kitchen", "Master Bedroom", "Master Bathroom", "Bedroom 2"]; 
+    let dynamicRooms = [...defaultRooms]; 
+
+    AppState.selectedStructuralOptionIds.forEach(optionId => {
+        const option = DB.structuralOptions[optionId];
+        if (option && option.effects) {
+            option.effects.forEach(effect => {
+                if (effect.newCategory && effect.category && typeof effect.baseAllowance === 'number') {
+                    AppState.currentPlanAllowances[effect.category] = (AppState.currentPlanAllowances[effect.category] || 0) + effect.baseAllowance;
+                    if ((effect.category.startsWith("Paint - ") || effect.category.startsWith("Flooring - ")) && !effect.category.includes(" (Existing)")) {
+                        const roomName = effect.category.replace("Paint - ", "").replace("Flooring - ", "");
+                        if (!dynamicRooms.includes(roomName)) {
+                            dynamicRooms.push(roomName);
+                        }
+                    }
+                } else if (effect.category && typeof effect.allowanceAdjustment === 'number') {
+                    AppState.currentPlanAllowances[effect.category] = (AppState.currentPlanAllowances[effect.category] || 0) + effect.allowanceAdjustment;
+                }
+            });
+        }
+    });
+    // Preserve manually added rooms that are not part of the default set
+    const manuallyAddedRooms = AppState.currentConfigurableRooms.filter(r => !defaultRooms.includes(r));
+    AppState.currentConfigurableRooms = [...new Set(dynamicRooms.concat(manuallyAddedRooms))];
+  },
+
+  getFullSpecsToRender: function() {
+    const specsToRender = JSON.parse(JSON.stringify(DB.baseSpecsDefinition));
+    specsToRender["Paint Selections"] = AppState.currentConfigurableRooms.map(room => `Paint - ${room}`);
+    specsToRender["Flooring Selections"] = AppState.currentConfigurableRooms.map(room => `Flooring - ${room}`);
+    return specsToRender;
+  },
+  
+  renderProductConfigurator: function() {
+    ProductConfiguratorDiv.innerHTML = ''; 
+    if (!AppState.selectedHousePlanId) {
+      ProductConfiguratorDiv.innerHTML = "<p>Please select a house plan to see product options.</p>";
+      return;
+    }
+
+    const specsToRender = this.getFullSpecsToRender();
+
+    for (const categoryName in specsToRender) {
+        const items = specsToRender[categoryName];
+        if (items.length === 0 && categoryName !== "Paint Selections" && categoryName !== "Flooring Selections") continue; 
+        if ((categoryName === "Paint Selections" || categoryName === "Flooring Selections") && items.length === 0) continue; 
+
+        const categorySection = document.createElement('div');
+        categorySection.className = 'category';
+        categorySection.dataset.categoryName = categoryName; 
+
+        const details = document.createElement('details');
+        details.className = 'product-category-details'; // Add class for specific styling
+        // details.open = true; 
+
+        const summary = document.createElement('summary');
+        summary.innerHTML = `${categoryName} <span class="category-status-indicator"></span>`;
+        details.appendChild(summary);
+
+        if (items.length === 0 && (categoryName === "Paint Selections" || categoryName === "Flooring Selections")) {
+            const noRoomsMsg = document.createElement('p');
+            noRoomsMsg.textContent = "No rooms configured for this category yet. Add rooms or select structural options that include rooms.";
+            noRoomsMsg.style.padding = "1em";
+            details.appendChild(noRoomsMsg);
+        }
+
+        items.forEach(specKey => {
+            const group = document.createElement('div');
+            group.className = 'group';
+            group.dataset.specKey = specKey;
+
+            let displaySpecKey = specKey;
+            if (specKey.startsWith("Paint - ")) displaySpecKey = `Paint for ${specKey.substring("Paint - ".length)}`;
+            else if (specKey.startsWith("Flooring - ")) displaySpecKey = `Flooring for ${specKey.substring("Flooring - ".length)}`;
+            
+            const title = document.createElement('h4');
+            title.textContent = displaySpecKey;
+            group.appendChild(title);
+
+            const cardContainer = document.createElement('div');
+            cardContainer.className = 'card-container';
+
+            let productSourceKey = specKey; 
+            if (specKey.startsWith("Paint - ")) productSourceKey = "Paint"; 
+            else if (specKey.startsWith("Flooring - ")) productSourceKey = "Flooring"; 
+            
+            const productsForSpec = DB.productCatalog[productSourceKey] || [];
+
+            productsForSpec.forEach(productOpt => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.productId = productOpt.id;
+
+                const selectionForThisSpec = AppState.configuredSelections[specKey];
+                let initialProductImage = productOpt.image;
+                if (selectionForThisSpec && selectionForThisSpec.productId === productOpt.id && selectionForThisSpec.colorImage) {
+                    initialProductImage = selectionForThisSpec.colorImage;
+                }
+
+                card.innerHTML = `
+                    <img id="preview-${CSS.escape(specKey)}-${productOpt.id}" src="${initialProductImage}" alt="${productOpt.name}" class="product-image" onerror="this.src='https://placehold.co/170x90/cccccc/969696?text=No+Img'">
+                    <div class="card-title">${productOpt.name}</div>
+                    <div class="color-swatch-container">
+                        ${(productOpt.colors || []).map(color => `
+                            <div class="color-swatch" title="${color.name}" style="background-image: url('${color.image}');"
+                                 data-color-id="${color.id}" data-color-name="${color.name}" data-color-image="${color.image}"></div>
+                        `).join('')}
+                    </div>`;
+
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('color-swatch')) return;
+                    const isSelectedCurrently = card.classList.contains('selected');
+                    this.updateProductSelection(specKey, isSelectedCurrently ? null : productOpt);
+                });
+
+                card.querySelectorAll('.color-swatch').forEach(swatch => {
+                    swatch.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const colorData = { id: swatch.dataset.colorId, name: swatch.dataset.colorName, image: swatch.dataset.colorImage };
+                        const currentProductSelectedForSpec = AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].productId === productOpt.id;
+                        if (!currentProductSelectedForSpec) {
+                             this.updateProductSelection(specKey, productOpt, colorData);
+                        } else {
+                            this.updateProductSelection(specKey, undefined, colorData);
+                        }
+                    });
+                    // Color Preview Logic (simplified, attach to main controller if needed globally)
+                    swatch.addEventListener('mouseenter', (e) => {
+                        ColorPreviewPopup.style.backgroundImage = `url('${swatch.dataset.colorImage}')`;
+                        ColorPreviewPopup.style.display = 'block';
+                        let x = e.clientX + 15;
+                        let y = e.clientY + 15;
+                        if (x + ColorPreviewPopup.offsetWidth > window.innerWidth) {
+                            x = e.clientX - ColorPreviewPopup.offsetWidth - 15;
+                        }
+                        if (y + ColorPreviewPopup.offsetHeight > window.innerHeight) {
+                            y = e.clientY - ColorPreviewPopup.offsetHeight - 15;
+                        }
+                        ColorPreviewPopup.style.left = `${x}px`;
+                        ColorPreviewPopup.style.top = `${y}px`;
+                    });
+                    swatch.addEventListener('mouseleave', () => {
+                        ColorPreviewPopup.style.display = 'none';
+                    });
+                });
+                cardContainer.appendChild(card);
+            });
+            group.appendChild(cardContainer);
+
+            const notesInput = document.createElement('textarea');
+            notesInput.className = 'notes-input';
+            notesInput.rows = 2;
+            notesInput.placeholder = `Notes for ${displaySpecKey}...`;
+            notesInput.value = (AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].notes) || '';
+            notesInput.addEventListener('blur', () => {
+                this.updateProductSelection(specKey, undefined, undefined, notesInput.value);
+            });
+            group.appendChild(notesInput);
+            details.appendChild(group);
+        });
+        categorySection.appendChild(details);
+        ProductConfiguratorDiv.appendChild(categorySection);
+        this.updateCategorySelectionStatus(categoryName);
+    }
+    Object.keys(AppState.configuredSelections).forEach(specKey => {
+        const groupElement = ProductConfiguratorDiv.querySelector(`.group[data-spec-key="${CSS.escape(specKey)}"]`);
+        if (groupElement) this.updateVisualsInGroup(groupElement, specKey);
+    });
+  },
+
+  updateProductSelection: function(specKey, productDetails, colorDetails, notesText) {
+    const currentSelection = AppState.configuredSelections[specKey] || {};
+    let selectionMade = false;
+    let productChanged = false;
+
+    if (productDetails === null) { 
+        delete AppState.configuredSelections[specKey];
+        selectionMade = true;
+    } else if (productDetails) { 
+        if (currentSelection.productId !== productDetails.id) productChanged = true;
+        currentSelection.productId = productDetails.id;
+        currentSelection.productName = productDetails.name;
+        const newProductFirstColor = productDetails.colors && productDetails.colors.length > 0 ? productDetails.colors[0] : {id: null, name: 'N/A', image: productDetails.image};
+        
+        if (productChanged || !currentSelection.colorId) {
+            currentSelection.colorId = newProductFirstColor.id;
+            currentSelection.colorName = newProductFirstColor.name;
+            currentSelection.colorImage = newProductFirstColor.image;
+        }
+        AppState.configuredSelections[specKey] = { ...currentSelection }; 
+        selectionMade = true;
+    }
+
+    if (colorDetails && AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].productId) {
+        AppState.configuredSelections[specKey].colorId = colorDetails.id;
+        AppState.configuredSelections[specKey].colorName = colorDetails.name;
+        AppState.configuredSelections[specKey].colorImage = colorDetails.image;
+        selectionMade = true;
+    }
+    
+    if (notesText !== undefined && AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].productId) {
+        AppState.configuredSelections[specKey].notes = notesText;
+        selectionMade = true;
+    } else if (notesText !== undefined && (!AppState.configuredSelections[specKey] || !AppState.configuredSelections[specKey].productId)) {
+        if (AppState.configuredSelections[specKey]) delete AppState.configuredSelections[specKey].notes;
+    }
+    
+    if (selectionMade && AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].productId) {
+        const product = this.findProductById(AppState.configuredSelections[specKey].productId, specKey);
+        // const allowance = AppState.currentPlanAllowances[specKey] || 0; // Allowance is not directly subtracted here for netPriceEffect
+        let productCost = 0;
+        if (product) {
+            if (product.priceType === "allowance_based") {
+                productCost = 0; // This product is covered by allowance, so its *added* cost is 0.
+            } else if (product.priceType === "upgrade_cost_total" || product.priceType === "upgrade_cost_per_room") {
+                productCost = product.priceValue; // This is the direct upgrade cost.
+            }
+        }
+        AppState.configuredSelections[specKey].netPriceEffect = productCost;
+    }
+
+
+    if (selectionMade) {
+        this.saveStateToLocalStorage();
+        this.renderSelectionsSheet(); 
+        this.updatePricingDisplay(); 
+        const groupElement = ProductConfiguratorDiv.querySelector(`.group[data-spec-key="${CSS.escape(specKey)}"]`);
+        if (groupElement) {
+            this.updateVisualsInGroup(groupElement, specKey);
+            const categoryElement = groupElement.closest('.category');
+            if (categoryElement) {
+                const categoryName = categoryElement.dataset.categoryName;
+                this.updateCategorySelectionStatus(categoryName);
+            }
+        }
+    }
+  },
+
+  findProductById: function(productId, specKey) {
+    let productSourceKey = specKey;
+    if (specKey.startsWith("Paint - ")) productSourceKey = "Paint";
+    else if (specKey.startsWith("Flooring - ")) productSourceKey = "Flooring";
+    const categoryProducts = DB.productCatalog[productSourceKey] || [];
+    return categoryProducts.find(p => p.id === productId);
+  },
+
+  updateVisualsInGroup: function(groupElement, specKey) { 
+    const selectionForSpec = AppState.configuredSelections[specKey];
+    const productSourceKey = specKey.startsWith("Paint - ") ? "Paint" : specKey.startsWith("Flooring - ") ? "Flooring" : specKey;
+    
+    groupElement.querySelectorAll('.card').forEach(card => {
+        const cardProductId = card.dataset.productId;
+        const productOption = (DB.productCatalog[productSourceKey] || []).find(p => p.id === cardProductId);
+
+        if (selectionForSpec && selectionForSpec.productId === cardProductId) {
+            card.classList.add('selected');
+            card.querySelector('.product-image').src = selectionForSpec.colorImage || (productOption ? productOption.image : 'https://placehold.co/170x90/cccccc/969696?text=No+Img');
+            card.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.toggle('selected-color', swatch.dataset.colorId === selectionForSpec.colorId);
+            });
+        } else {
+            card.classList.remove('selected');
+            if(productOption) card.querySelector('.product-image').src = productOption.image;
+            else card.querySelector('.product-image').src = 'https://placehold.co/170x90/cccccc/969696?text=No+Img';
+            card.querySelectorAll('.color-swatch').forEach(swatch => swatch.classList.remove('selected-color'));
+        }
+    });
+    const notesInput = groupElement.querySelector('.notes-input');
+    if (notesInput) {
+        notesInput.value = (selectionForSpec && selectionForSpec.notes) || '';
+    }
+  },
+  updateCategorySelectionStatus: function(categoryName) { 
+    const categoryElement = ProductConfiguratorDiv.querySelector(`.category[data-category-name="${CSS.escape(categoryName)}"]`);
+    if (!categoryElement) return;
+
+    const summaryIndicator = categoryElement.querySelector('summary .category-status-indicator');
+    if (!summaryIndicator) return;
+
+    const specsLayout = this.getFullSpecsToRender(); 
+    const itemsInCategory = specsLayout[categoryName] || [];
+    if (itemsInCategory.length === 0) {
+        summaryIndicator.textContent = '';
+        summaryIndicator.className = 'category-status-indicator';
+        return;
+    }
+
+    let selectedCount = 0;
+    itemsInCategory.forEach(specKey => {
+        if (AppState.configuredSelections[specKey] && AppState.configuredSelections[specKey].productId) {
+            selectedCount++;
+        }
+    });
+
+    if (selectedCount === itemsInCategory.length) {
+        summaryIndicator.textContent = '✔'; 
+        summaryIndicator.className = 'category-status-indicator status-complete';
+    } else if (selectedCount > 0) {
+        summaryIndicator.textContent = '●'; 
+        summaryIndicator.className = 'category-status-indicator status-partial';
+    } else {
+        summaryIndicator.textContent = ''; 
+        summaryIndicator.className = 'category-status-indicator';
+    }
+  },
+
+  addConfigurableRoom: function() {
+    const roomName = AddRoomNameInput.value.trim();
+    if (roomName && !AppState.currentConfigurableRooms.includes(roomName)) {
+        AppState.currentConfigurableRooms.push(roomName);
+        this.renderProductConfigurator(); 
+        this.renderSelectionsSheet();
+        this.saveStateToLocalStorage();
+        AddRoomNameInput.value = '';
+    } else if (AppState.currentConfigurableRooms.includes(roomName)) {
+        alert("This room name already exists.");
+    } else if (!roomName) {
+        alert("Please enter a room name.");
+    }
+  },
+  
+  updatePricingDisplay: function() {
+    let basePrice = 0;
+    let structuralOptionsPrice = 0;
+    let productSelectionsNetCost = 0;
+
+    if (AppState.selectedHousePlanId) {
+      const plan = DB.housePlans.find(p => p.id === AppState.selectedHousePlanId);
+      if (plan) basePrice = plan.basePrice;
+    }
+
+    AppState.selectedStructuralOptionIds.forEach(optionId => {
+      const option = DB.structuralOptions[optionId];
+      if (option) structuralOptionsPrice += option.priceAdjustment;
+    });
+
+    for (const specKey in AppState.configuredSelections) {
+      const selection = AppState.configuredSelections[specKey];
+      // productSelectionsNetCost is the sum of *additional costs* for products.
+      // Allowance-based products contribute $0 to this if they are the base selection.
+      // Upgrade products contribute their full upgrade value.
+      if (selection && typeof selection.netPriceEffect === 'number') {
+        productSelectionsNetCost += selection.netPriceEffect;
+      }
+    }
+
+    const grandTotal = basePrice + structuralOptionsPrice + productSelectionsNetCost;
+
+    PriceBaseEl.textContent = `$${basePrice.toLocaleString()}`;
+    PriceStructuralOptionsEl.textContent = `$${structuralOptionsPrice.toLocaleString()}`;
+    PriceProductSelectionsEl.textContent = `$${productSelectionsNetCost.toLocaleString()}`; // This is the sum of UPGRADE costs
+    PriceGrandTotalEl.textContent = `$${grandTotal.toLocaleString()}`;
+  },
+
+  renderSelectionsSheet: function() { 
+    SelectionsSheetContentDiv.innerHTML = '';
+    if (!AppState.selectedHousePlanId) {
+        SelectionsSheetContentDiv.innerHTML = '<p class="no-selection">Select a house plan to begin making selections.</p>';
+        return;
+    }
+
+    const specsLayout = this.getFullSpecsToRender();
+    let hasAnyProductSelection = false;
+
+    for (const categoryName in specsLayout) {
+        const itemsInCategory = specsLayout[categoryName];
+        if (itemsInCategory.length === 0) continue;
+
+        let categoryHasSelections = false;
+        const categoryItemsHTML = itemsInCategory.map(specKey => {
+            const selection = AppState.configuredSelections[specKey];
+            if (selection && selection.productId) {
+                hasAnyProductSelection = true;
+                categoryHasSelections = true;
+                let locationPart = "";
+                let itemPart = specKey;
+
+                if (specKey.startsWith("Paint - ")) { itemPart = "Paint"; locationPart = specKey.substring("Paint - ".length); }
+                else if (specKey.startsWith("Flooring - ")) { itemPart = "Flooring"; locationPart = specKey.substring("Flooring - ".length); }
+                
+                // Determine product price for display
+                const product = this.findProductById(selection.productId, specKey);
+                let displayPrice = "Included in Allowance";
+                if (product && product.priceType !== "allowance_based") {
+                    displayPrice = `+$${product.priceValue.toLocaleString()}`;
+                }
+
+
+                return `
+                    <div class="sheet-item" data-target-spec-key="${CSS.escape(specKey)}">
+                        <p><strong>Item:</strong> ${itemPart} ${locationPart ? `(${locationPart})` : ''}</p>
+                        <p><strong>Product:</strong> ${selection.productName || 'N/A'} <span style="font-size:0.9em; color: #555;">(${displayPrice})</span></p>
+                        <p><strong>Color:</strong> ${selection.colorName || 'N/A'} 
+                           ${selection.colorImage ? `<img src="${selection.colorImage}" alt="${selection.colorName || ''}" class="color-preview">` : ''}
+                        </p>
+                        ${selection.notes ? `<p><strong>Notes:</strong> ${selection.notes.replace(/\n/g, '<br>')}</p>` : ''}
+                    </div>`;
+            }
+            return '';
+        }).join('');
+
+        if (categoryHasSelections) {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'sheet-category';
+            categoryDiv.innerHTML = `<h3 class="sheet-category-title" data-target-category-name="${CSS.escape(categoryName)}">${categoryName}</h3>${categoryItemsHTML}`;
+            SelectionsSheetContentDiv.appendChild(categoryDiv);
+        }
+    }
+
+    if (!hasAnyProductSelection) {
+        SelectionsSheetContentDiv.innerHTML = '<p class="no-selection">Make product selections in the configurator to see them here.</p>';
+    }
+
+    SelectionsSheetContentDiv.querySelectorAll('.sheet-category-title, .sheet-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const targetSpecKey = el.dataset.targetSpecKey;
+            const targetCategoryName = el.dataset.targetCategoryName;
+            
+            let targetElement;
+            if (targetSpecKey) {
+                targetElement = ProductConfiguratorDiv.querySelector(`.group[data-spec-key="${targetSpecKey}"]`);
+            } else if (targetCategoryName) {
+                targetElement = ProductConfiguratorDiv.querySelector(`.category[data-category-name="${targetCategoryName}"] details`);
+            }
+
+            if (targetElement) {
+                const detailsParent = targetElement.closest('details.product-category-details') || targetElement.closest('details#housePlanDetails');
+                if (detailsParent && !detailsParent.open) {
+                    detailsParent.open = true;
+                }
+                setTimeout(() => {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, detailsParent && !detailsParent.open ? 200 : 0);
+            }
+        });
+    });
+  },
+
+  saveStateToLocalStorage: function() {
+    const stateToSave = {
+        selectedHousePlanId: AppState.selectedHousePlanId,
+        selectedStructuralOptionIds: AppState.selectedStructuralOptionIds,
+        currentConfigurableRooms: AppState.currentConfigurableRooms,
+        configuredSelections: AppState.configuredSelections
+    };
+    localStorage.setItem('advancedHomeSelections_v1.1', JSON.stringify(stateToSave)); // Incremented version for safety
+  },
+
+  loadStateFromLocalStorage: function() {
+    const storedState = localStorage.getItem('advancedHomeSelections_v1.1');
+    if (storedState) {
+        const loaded = JSON.parse(storedState);
+        AppState.selectedHousePlanId = loaded.selectedHousePlanId || null;
+        AppState.selectedStructuralOptionIds = loaded.selectedStructuralOptionIds || [];
+        AppState.currentConfigurableRooms = loaded.currentConfigurableRooms || ["Living Room", "Kitchen", "Master Bedroom", "Master Bathroom", "Bedroom 2"];
+        AppState.configuredSelections = loaded.configuredSelections || {};
+    }
+  },
+
+  downloadConfiguredSelections: function() {
+    if (!AppState.selectedHousePlanId) {
+        alert("Please select a house plan first."); return;
+    }
+    const dataToDownload = {
+        selectedPlan: DB.housePlans.find(p => p.id === AppState.selectedHousePlanId),
+        selectedStructuralOptions: AppState.selectedStructuralOptionIds.map(id => DB.structuralOptions[id]),
+        productSelections: AppState.configuredSelections,
+        pricing: {
+            basePrice: parseFloat(PriceBaseEl.textContent.replace(/[^0-9.,$]+/g,"").replace(',','')),
+            structuralOptionsPrice: parseFloat(PriceStructuralOptionsEl.textContent.replace(/[^0-9.,$]+/g,"").replace(',','')),
+            productSelectionsNetCost: parseFloat(PriceProductSelectionsEl.textContent.replace(/[^0-9.,$]+/g,"").replace(',','')),
+            grandTotal: parseFloat(PriceGrandTotalEl.textContent.replace(/[^0-9.,$]+/g,"").replace(',',''))
+        },
+        configurableRooms: AppState.currentConfigurableRooms
+    };
+    const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'advanced_home_selections.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  },
+
+  clearAllConfiguredSelections: function() {
+    if (confirm("Are you sure you want to clear all selections, including the chosen house plan and structural options?")) {
+        AppState.selectedHousePlanId = null;
+        AppState.selectedStructuralOptionIds = [];
+        AppState.currentConfigurableRooms = ["Living Room", "Kitchen", "Master Bedroom", "Master Bathroom", "Bedroom 2"]; 
+        AppState.configuredSelections = {};
+        AppState.currentPlanAllowances = {};
+        
+        this.saveStateToLocalStorage(); 
+
+        HousePlanDetails.open = true; // Open the plan selector
+        this.updateHousePlanSummary(null); // Reset summary text
+
+        document.querySelectorAll('.house-plan-card').forEach(c => c.classList.remove('selected-plan'));
+        StructuralOptionsSection.style.display = 'none';
+        StructuralOptionsContainer.innerHTML = '';
+        ProductConfiguratorSection.style.display = 'none';
+        ProductConfiguratorDiv.innerHTML = '<p>Please select a house plan to see product options.</p>';
+        document.getElementById('addRoomControls').style.display = 'none';
+
+
+        this.updatePricingDisplay();
+        this.renderSelectionsSheet();
+        alert("All selections have been cleared.");
+    }
+  }
+};
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+  APP_CONTROLLER.init();
+});
+
+</script>
+</body>
+</html>
